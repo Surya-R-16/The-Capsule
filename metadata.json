@@ -1,0 +1,7 @@
+{
+  "name": "The Capsule",
+  "description": "Your life’s narrative, captured by voice, archived by AI. A personal life-archivist that transcribes your thoughts and analyzes your journey.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
