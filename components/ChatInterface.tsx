@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { CapsuleEntry, UserProfile } from '../types';
 import VoiceRecorder from './VoiceRecorder';
 
@@ -6,11 +6,21 @@ interface ChatInterfaceProps {
   entries: CapsuleEntry[];
   profile: UserProfile;
   onRecordingComplete: (blob: Blob, base64: string) => void;
+  onTextEntryComplete: (text: string) => void;
   isProcessing: boolean;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ entries, profile, onRecordingComplete, isProcessing }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ entries, profile, onRecordingComplete, onTextEntryComplete, isProcessing }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
+  const [textInput, setTextInput] = useState('');
+
+  const handleTextSubmit = () => {
+    if (textInput.trim() && !isProcessing) {
+      onTextEntryComplete(textInput);
+      setTextInput('');
+    }
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -69,7 +79,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ entries, profile, onRecor
             </div>
           </React.Fragment>
         ))}
-        
+
         {isProcessing && (
           <div className="flex justify-start animate-pulse">
             <div className="bg-stone-50 p-4 rounded-2xl rounded-tl-none border border-stone-100">
@@ -86,10 +96,57 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ entries, profile, onRecor
 
       {/* Input Area */}
       <div className="p-6 bg-stone-50 border-t border-stone-200 relative">
-        <div className="flex justify-center">
-          <VoiceRecorder onRecordingComplete={onRecordingComplete} isProcessing={isProcessing} compact />
+        <div className="flex justify-center mb-4">
+          <div className="flex bg-stone-200 p-1 rounded-full">
+            <button
+              onClick={() => setInputMode('voice')}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${inputMode === 'voice' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-500 hover:text-stone-700'}`}
+            >
+              Voice
+            </button>
+            <button
+              onClick={() => setInputMode('text')}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${inputMode === 'text' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-500 hover:text-stone-700'}`}
+            >
+              Text
+            </button>
+          </div>
         </div>
-        <p className="text-center text-[9px] text-stone-400 mt-4 uppercase tracking-[0.2em]">Hold for deeper reflection</p>
+
+        {inputMode === 'voice' ? (
+          <div className="flex justify-center">
+            <VoiceRecorder onRecordingComplete={onRecordingComplete} isProcessing={isProcessing} compact />
+          </div>
+        ) : (
+          <div className="max-w-md mx-auto">
+            <div className="relative">
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Write your thought here..."
+                disabled={isProcessing}
+                className="w-full bg-white border border-stone-200 rounded-xl p-4 pr-12 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-none h-24"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleTextSubmit();
+                  }
+                }}
+              />
+              <button
+                onClick={handleTextSubmit}
+                disabled={!textInput.trim() || isProcessing}
+                className="absolute bottom-3 right-3 w-8 h-8 bg-stone-800 text-white rounded-full flex items-center justify-center hover:bg-emerald-600 disabled:opacity-50 disabled:hover:bg-stone-800 transition-colors"
+              >
+                <i className="fas fa-arrow-up text-xs"></i>
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="text-center text-[9px] text-stone-400 mt-4 uppercase tracking-[0.2em]">
+          {inputMode === 'voice' ? 'Hold for deeper reflection' : 'Type your inner thoughts'}
+        </p>
       </div>
     </div>
   );

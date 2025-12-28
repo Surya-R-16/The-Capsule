@@ -85,6 +85,31 @@ export const analyzeVoiceNote = async (base64Audio: string, mimeType: string, pr
   }
 };
 
+export const analyzeTextLog = async (text: string, profile: UserProfile): Promise<CapsuleAnalysis> => {
+  const model = "models/gemini-flash-latest";
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: {
+        parts: [
+          { text: `Analyze this text memory for my archive: "${text}"` }
+        ]
+      },
+      config: {
+        systemInstruction: getSystemInstruction(profile),
+        responseMimeType: "application/json",
+        responseSchema: ANALYSIS_SCHEMA
+      }
+    });
+
+    return JSON.parse(response.text || "{}") as CapsuleAnalysis;
+  } catch (error) {
+    console.error("Error analyzing text log:", error);
+    throw error;
+  }
+};
+
 export const generateWeeklyLetter = async (entries: CapsuleEntry[], weekLabel: string, profile: UserProfile): Promise<WeeklyLetter> => {
   const model = "models/gemini-flash-latest";
 

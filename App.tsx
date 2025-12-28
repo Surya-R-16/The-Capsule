@@ -6,7 +6,7 @@ import ArchiveSearch from './components/ArchiveSearch';
 import ProfileSettings from './components/ProfileSettings';
 import ChatInterface from './components/ChatInterface';
 import InsightsDashboard from '@/components/InsightsDashboard';
-import { analyzeVoiceNote, generateWeeklyLetter, generateSoulCard } from './services/geminiService';
+import { analyzeVoiceNote, analyzeTextLog, generateWeeklyLetter, generateSoulCard } from './services/geminiService';
 
 const App: React.FC = () => {
   const [entries, setEntries] = useState<CapsuleEntry[]>([]);
@@ -79,9 +79,27 @@ const App: React.FC = () => {
     }
   }, [profile]);
 
-  const handleTextEntryComplete = useCallback((entry: CapsuleEntry) => {
-    setEntries(prev => [entry, ...prev]);
-  }, []);
+  const handleTextEntryComplete = useCallback(async (text: string) => {
+    setIsProcessing(true);
+    try {
+      const analysis = await analyzeTextLog(text, profile);
+      const soulCardUrl = await generateSoulCard(analysis.imagePrompt);
+
+      const newEntry: CapsuleEntry = {
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        ...analysis,
+        imageUrl: soulCardUrl,
+        type: 'text'
+      };
+      setEntries(prev => [newEntry, ...prev]);
+    } catch (err) {
+      console.error(err);
+      alert("The archive encountered an error. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [profile]);
 
   // When changing tabs, clear any active filters
   const handleTabChange = (tab: typeof activeTab) => {
@@ -107,7 +125,7 @@ const App: React.FC = () => {
       </header>
 
       <main className="pb-10">
-        {activeTab === 'chat' && <ChatInterface entries={entries} profile={profile} onRecordingComplete={handleRecordingComplete} onTextEntryComplete={handleTextEntryComplete} isProcessing={isProcessing} isPrivacyMode={isPrivacyMode} />}
+        {activeTab === 'chat' && <ChatInterface entries={entries} profile={profile} onRecordingComplete={handleRecordingComplete} onTextEntryComplete={handleTextEntryComplete} isProcessing={isProcessing} />}
 
         {activeTab === 'archive' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
