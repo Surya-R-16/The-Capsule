@@ -13,33 +13,10 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
   const [showError, setShowError] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const recordingTimeRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
+
   const MIN_DURATION = 10;
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setRecordingTime(prev => {
-          const newItem = prev + 1;
-          recordingTimeRef.current = newItem;
-          return newItem;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isRecording]);
-
-  useEffect(() => {
-    // Cleanup on unmount
-    return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
 
   const startRecording = async () => {
     try {
@@ -48,16 +25,16 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
       setShowError(false);
-      setRecordingTime(0);
-      recordingTimeRef.current = 0;
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       mediaRecorder.onstop = async () => {
-        // Use ref to get the latest time, bypassing closure staleness
-        if (recordingTimeRef.current >= MIN_DURATION) {
+        // Use the system clock to determine final duration, not the interval counter
+        const finalDuration = (Date.now() - startTimeRef.current) / 1000;
+
+        if (finalDuration >= MIN_DURATION) {
           const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
           const reader = new FileReader();
           reader.readAsDataURL(audioBlob);
@@ -73,8 +50,13 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
         stream.getTracks().forEach(track => track.stop());
       };
 
+      startTimeRef.current = Date.now();
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }, 1000);
     } catch (err) {
       console.error("Failed to start recording:", err);
       alert("Please allow microphone access to record memories.");
@@ -85,6 +67,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   };
 
@@ -100,18 +83,14 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
     return (
       <div className="flex flex-col items-center gap-3">
         {showError && (
-          <div className="absolute bottom-24 bg-rose-100 text-rose-600 text-[10px] font-bold py-1 px-3 rounded-full animate-bounce" role="alert">
+          <div className="absolute bottom-24 bg-rose-100 text-rose-600 text-[10px] font-bold py-1 px-3 rounded-full animate-bounce z-[60]">
             Record for at least 10s
           </div>
         )}
-        <div className="flex items-center gap-4 relative">
+        <div className="flex items-center gap-4">
           {isRecording && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-rose-500/20 rounded-full animate-pulse-slow scale-150 pointer-events-none" />
-          )}
-
-          {isRecording && (
-            <div className="flex flex-col items-end mr-2">
-              <span className="text-rose-500 font-bold text-xs tabular-nums font-mono">{formatTime(recordingTime)}</span>
+            <div className="flex flex-col items-end">
+              <span className="text-rose-500 font-bold text-xs tabular-nums">{formatTime(recordingTime)}</span>
               <div className="w-12 h-1 bg-stone-200 rounded-full mt-1 overflow-hidden">
                 <div
                   className="h-full bg-rose-500 transition-all duration-300"
@@ -123,12 +102,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
           <button
             onClick={isRecording ? stopRecording : startRecording}
             disabled={isProcessing}
-            aria-label={isRecording ? "Stop recording" : "Start recording"}
-            className={`relative z-10 h-14 w-14 rounded-full flex items-center justify-center transition-all shadow-lg ring-4 ring-white ${isRecording
-              ? 'bg-rose-500 text-white'
-              : isProcessing
-                ? 'bg-stone-300 text-stone-500'
-                : 'bg-stone-800 text-paper hover:scale-105 hover:bg-stone-700'
+            className={`h-14 w-14 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 ${isRecording
+                ? 'bg-rose-500 text-white'
+                : isProcessing
+                  ? 'bg-stone-300 text-stone-500'
+                  : 'bg-stone-800 text-white hover:scale-105'
               }`}
           >
             {isProcessing ? (
@@ -153,12 +131,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
         <button
           onClick={isRecording ? stopRecording : startRecording}
           disabled={isProcessing}
-          aria-label={isRecording ? "Stop recording" : "Start recording"}
-          className={`relative h-20 w-20 rounded-full flex items-center justify-center transition-all transform active:scale-95 shadow-xl ring-4 ring-white ${isRecording
-            ? 'bg-rose-500 text-white'
-            : isProcessing
-              ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
-              : 'bg-stone-800 text-paper hover:bg-stone-900'
+          className={`relative h-20 w-20 rounded-full flex items-center justify-center transition-all transform active:scale-95 ${isRecording
+              ? 'bg-rose-500 text-white'
+              : isProcessing
+                ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                : 'bg-stone-800 text-white hover:bg-stone-900'
             }`}
         >
           {isProcessing ? (
@@ -172,7 +149,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete, isPr
       </div>
       <div className="text-center min-h-[40px]">
         {showError ? (
-          <p className="text-rose-500 font-bold text-sm animate-in fade-in" role="alert">
+          <p className="text-rose-500 font-bold text-sm animate-in fade-in">
             Capture a few more seconds...
           </p>
         ) : isProcessing ? (

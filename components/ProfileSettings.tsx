@@ -1,108 +1,167 @@
+
 import React from 'react';
-import { UserProfile, CapsuleEntry, WeeklyLetter } from '../types';
+import { UserProfile } from '../types';
 
 interface ProfileSettingsProps {
   profile: UserProfile;
-  entries: CapsuleEntry[];
-  weeklyLetters: WeeklyLetter[];
   onChange: (profile: UserProfile) => void;
 }
 
-const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, entries, weeklyLetters, onChange }) => {
-  const handleExport = () => {
-    const archive = {
-      version: "1.0",
-      generatedAt: new Date().toISOString(),
-      profile,
-      entries,
-      weeklyLetters
-    };
+const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, onChange }) => {
+  const archetypes = [
+    { id: 'nurturer', name: 'The Nurturer', icon: 'fa-heart', desc: 'Warm, empathetic, and nurturing.' },
+    { id: 'stoic', name: 'The Anchor', icon: 'fa-anchor', desc: 'Resilient, grounded, and objective.' },
+    { id: 'dreamer', name: 'The Dreamer', icon: 'fa-cloud-moon', desc: 'Lyrical, poetic, and imaginative.' },
+    { id: 'sage', name: 'The Sage', icon: 'fa-scroll', desc: 'Wise, timeless, and global observer.' },
+    { id: 'inquirer', name: 'The Inquirer', icon: 'fa-question', desc: 'Curious, piercing, and Socratic.' },
+    { id: 'individualist', name: 'The Individual', icon: 'fa-compass', desc: 'Authentic, bold, and existential.' },
+    { id: 'alchemist', name: 'The Alchemist', icon: 'fa-flask', desc: 'Transmuting struggle into wisdom.' },
+    { id: 'minimalist', name: 'The Minimalist', icon: 'fa-minus', desc: 'Finding the singular truth in noise.' }
+  ] as const;
 
-    const blob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `the-capsule-archive-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const auraConfigs = [
+    { id: 'stone', name: 'Tidal', color: 'bg-sky-500', desc: 'Sophisticated & Clear' },
+    { id: 'midnight', name: 'Onyx', color: 'bg-stone-900', desc: 'Deep & Enigmatic' },
+    { id: 'rose', name: 'Bloom', color: 'bg-rose-400', desc: 'Warm & Compassionate' },
+    { id: 'forest', name: 'Grove', color: 'bg-emerald-500', desc: 'Vibrant & Grounded' }
+  ] as const;
 
   return (
-    <div className="w-full max-w-xl mx-auto glass-morphism p-8 rounded-3xl border border-stone-200 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 bg-stone-800 rounded-2xl flex items-center justify-center text-white">
-          <i className="fas fa-user-gear"></i>
-        </div>
-        <div>
-          <h2 className="serif text-2xl font-bold text-stone-800">Your Identity</h2>
-          <p className="text-stone-500 text-xs">Tell The Capsule who you are today.</p>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2">Nickname</label>
-          <input
-            type="text"
-            value={profile.name}
-            onChange={(e) => onChange({ ...profile, name: e.target.value })}
-            className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all shadow-sm"
-            placeholder="What should I call you?"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2">Bot Initial Greeting</label>
-          <textarea
-            value={profile.initialGreeting}
-            onChange={(e) => onChange({ ...profile, initialGreeting: e.target.value })}
-            className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all h-24 resize-none shadow-sm"
-            placeholder="Customize the first message you see in chat..."
-          />
-          <p className="text-[10px] text-stone-400 mt-2 italic">This is the first message the Archivist sends in the Chat tab.</p>
-        </div>
-
-        <div>
-          <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2">Current North Star (Focus)</label>
-          <textarea
-            value={profile.northStar}
-            onChange={(e) => onChange({ ...profile, northStar: e.target.value })}
-            className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all h-28 resize-none shadow-sm"
-            placeholder="e.g., Learning to be more present with my family."
-          />
-          <p className="text-[10px] text-stone-400 mt-2 italic">I will use this to find deeper meaning in your memories.</p>
-        </div>
-
-        <div>
-          <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2">Archivist Persona</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['empathetic', 'stoic', 'poetic'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => onChange({ ...profile, persona: p })}
-                className={`py-3 px-2 rounded-xl text-[10px] font-bold uppercase tracking-tighter transition-all border ${profile.persona === p
-                    ? 'bg-stone-800 text-white border-stone-800 shadow-md'
-                    : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
-                  }`}
-              >
-                {p}
-              </button>
-            ))}
+    <div className="w-full max-w-2xl mx-auto space-y-8 pb-32 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* SECTION: THE SEEKER */}
+      <div className="glass-morphism p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-stone-200 shadow-sm">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center text-stone-500">
+            <i className="fas fa-fingerprint"></i>
+          </div>
+          <div>
+            <h2 className="serif text-xl font-bold text-stone-800">The Seeker</h2>
+            <p className="text-stone-500 text-[10px] uppercase tracking-widest font-bold">Your Human Identity</p>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-stone-100">
-          <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2">Data Management</label>
-          <button
-            onClick={handleExport}
-            className="w-full flex items-center justify-center gap-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-3 px-4 rounded-xl transition-all border border-stone-200"
-          >
-            <i className="fas fa-download"></i>
-            Export Archive (JSON)
-          </button>
-          <p className="text-[10px] text-stone-400 mt-2 italic text-center">Save a backup of your entries and letters.</p>
+        <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2 ml-1">Nickname</label>
+              <input
+                type="text"
+                value={profile.name}
+                onChange={(e) => onChange({ ...profile, name: e.target.value })}
+                className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-200 transition-all shadow-sm"
+                placeholder="How shall I address you?"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2 ml-1">Current North Star</label>
+              <input
+                type="text"
+                value={profile.northStar}
+                onChange={(e) => onChange({ ...profile, northStar: e.target.value })}
+                className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-200 transition-all shadow-sm"
+                placeholder="Your primary focus..."
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2 ml-1">Life Background (Context)</label>
+            <textarea
+              value={profile.lifeBackground}
+              onChange={(e) => onChange({ ...profile, lifeBackground: e.target.value })}
+              className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3.5 text-sm text-stone-900 h-28 resize-none focus:outline-none focus:ring-2 focus:ring-stone-200 transition-all shadow-sm leading-relaxed"
+              placeholder="Tell me about your role, your city, your struggles, and your joys..."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION: THE ARCHIVIST */}
+      <div className="glass-morphism p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-stone-200 shadow-sm relative overflow-hidden">
+        <div className="flex items-center gap-4 mb-8 relative z-10">
+          <div className="w-10 h-10 bg-stone-800 rounded-full flex items-center justify-center text-white">
+            <i className="fas fa-sparkles"></i>
+          </div>
+          <div>
+            <h2 className="serif text-xl font-bold text-stone-800">The Archivist</h2>
+            <p className="text-stone-500 text-[10px] uppercase tracking-widest font-bold">Your Philosophical Mirror</p>
+          </div>
+        </div>
+
+        <div className="space-y-8 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2 ml-1">Archivist's Name</label>
+              <input
+                type="text"
+                value={profile.archivistName}
+                onChange={(e) => onChange({ ...profile, archivistName: e.target.value })}
+                className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-200 transition-all shadow-sm"
+                placeholder="Name your silent partner..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2 ml-1">System Aura</label>
+              <div className="flex gap-4 h-[50px] items-center">
+                {auraConfigs.map((aura) => (
+                  <button
+                    key={aura.id}
+                    onClick={() => onChange({ ...profile, aura: aura.id })}
+                    className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center ${aura.color
+                      } ${profile.aura === aura.id ? 'ring-2 ring-offset-2 ring-stone-400 scale-110' : 'opacity-40 hover:opacity-100'}`}
+                    title={`${aura.name}: ${aura.desc}`}
+                  >
+                    {profile.aura === aura.id && <i className="fas fa-check text-white text-[10px]"></i>}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[8px] text-stone-400 uppercase tracking-widest mt-2 font-bold italic">
+                {auraConfigs.find(a => a.id === profile.aura)?.name} Aura Active
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-4 ml-1">Philosophical Archetype</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {archetypes.map((arch) => (
+                <button
+                  key={arch.id}
+                  onClick={() => onChange({ ...profile, persona: arch.id })}
+                  className={`flex items-start gap-4 p-4 rounded-2xl border transition-all text-left ${profile.persona === arch.id
+                      ? 'bg-stone-800 border-stone-800 text-white shadow-lg scale-[1.02]'
+                      : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300'
+                    }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${profile.persona === arch.id ? 'bg-white/10' : 'bg-stone-50 text-stone-400'}`}>
+                    <i className={`fas ${arch.icon} text-sm`}></i>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider mb-1">{arch.name}</h4>
+                    <p className={`text-[10px] leading-relaxed ${profile.persona === arch.id ? 'text-stone-300' : 'text-stone-400'}`}>{arch.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-4 ml-1">Resonance Preference</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['pattern-matching', 'silver-linings', 'critical-growth', 'validation'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => onChange({ ...profile, resonanceFilter: filter })}
+                  className={`py-4 px-1 rounded-xl text-[9px] font-bold uppercase tracking-tight transition-all border ${profile.resonanceFilter === filter
+                      ? 'bg-stone-800 text-white border-stone-800 shadow-md'
+                      : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
+                    }`}
+                >
+                  {filter.replace('-', ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

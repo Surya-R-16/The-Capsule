@@ -1,8 +1,12 @@
 export interface UserProfile {
   name: string;
   northStar: string;
-  persona: 'empathetic' | 'stoic' | 'poetic';
-  initialGreeting: string;
+  lifeBackground?: string;
+  persona: 'nurturer' | 'stoic' | 'dreamer' | 'sage' | 'inquirer' | 'individualist' | 'alchemist' | 'minimalist' | 'empathetic' | 'poetic'; // Keeping old ones for compatibility
+  initialGreeting?: string;
+  archivistName?: string;
+  aura?: 'stone' | 'midnight' | 'rose' | 'forest';
+  resonanceFilter?: 'pattern-matching' | 'silver-linings' | 'critical-growth' | 'validation';
 }
 
 export interface CapsuleEntry {
@@ -14,8 +18,10 @@ export interface CapsuleEntry {
   tags: string[];
   response: string;
   imageUrl?: string;
+  userImageUrl?: string;
   imagePrompt?: string;
   isBotResponse?: boolean; // New: to distinguish chat bubbles
+  type?: 'voice' | 'text';
 }
 
 export interface CapsuleAnalysis {

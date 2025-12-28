@@ -59,7 +59,7 @@ export const generateSoulCard = async (prompt: string): Promise<string | undefin
   return undefined;
 };
 
-export const analyzeVoiceNote = async (base64Audio: string, mimeType: string, profile: UserProfile): Promise<CapsuleAnalysis> => {
+export const analyzeVoiceNote = async (base64Audio: string, mimeType: string, profile: UserProfile, imageBase64?: string): Promise<CapsuleAnalysis> => {
   const model = "models/gemini-flash-latest";
 
   try {
