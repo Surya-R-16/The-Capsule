@@ -123,6 +123,10 @@ const App: React.FC = () => {
     };
   }, [entries]);
 
+  const handleDeleteEntry = useCallback((id: string) => {
+    setEntries(prev => prev.filter(entry => entry.id !== id));
+  }, []);
+
   return (
     <div className="min-h-screen pb-20 max-w-4xl mx-auto px-4 sm:px-6 bg-paper font-sans text-stone-800">
       <header className="py-12 flex flex-col items-center text-center">
@@ -162,7 +166,7 @@ const App: React.FC = () => {
         {activeTab === 'archive' && (
           <div>
             <ArchiveSearch entries={entries} profile={profile} />
-            <ArchiveTimeline entries={entries} />
+            <ArchiveTimeline entries={entries} onDelete={handleDeleteEntry} />
           </div>
         )}
 
@@ -182,12 +186,17 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'profile' && (
-          <ProfileSettings profile={profile} onChange={setProfile} />
+          <ProfileSettings
+            profile={profile}
+            entries={entries}
+            weeklyLetters={weeklyLetters}
+            onChange={setProfile}
+          />
         )}
       </main>
 
       <footer className="mt-24 pt-12 border-t border-stone-100 text-center text-stone-400 text-[10px] uppercase tracking-widest font-bold">
-        <p>The Capsule &bull; Powered by Gemini</p>
+        <p>The Capsule &bull;</p>
       </footer>
     </div>
   );

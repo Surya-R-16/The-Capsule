@@ -1,12 +1,34 @@
 import React from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, CapsuleEntry, WeeklyLetter } from '../types';
 
 interface ProfileSettingsProps {
   profile: UserProfile;
+  entries: CapsuleEntry[];
+  weeklyLetters: WeeklyLetter[];
   onChange: (profile: UserProfile) => void;
 }
 
-const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, onChange }) => {
+const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, entries, weeklyLetters, onChange }) => {
+  const handleExport = () => {
+    const archive = {
+      version: "1.0",
+      generatedAt: new Date().toISOString(),
+      profile,
+      entries,
+      weeklyLetters
+    };
+
+    const blob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `the-capsule-archive-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="w-full max-w-xl mx-auto glass-morphism p-8 rounded-3xl border border-stone-200 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4 mb-8">
@@ -60,16 +82,27 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, onChange }) 
               <button
                 key={p}
                 onClick={() => onChange({ ...profile, persona: p })}
-                className={`py-3 px-2 rounded-xl text-[10px] font-bold uppercase tracking-tighter transition-all border ${
-                  profile.persona === p 
-                    ? 'bg-stone-800 text-white border-stone-800 shadow-md' 
+                className={`py-3 px-2 rounded-xl text-[10px] font-bold uppercase tracking-tighter transition-all border ${profile.persona === p
+                    ? 'bg-stone-800 text-white border-stone-800 shadow-md'
                     : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
-                }`}
+                  }`}
               >
                 {p}
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="pt-6 border-t border-stone-100">
+          <label className="block text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-2">Data Management</label>
+          <button
+            onClick={handleExport}
+            className="w-full flex items-center justify-center gap-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-3 px-4 rounded-xl transition-all border border-stone-200"
+          >
+            <i className="fas fa-download"></i>
+            Export Archive (JSON)
+          </button>
+          <p className="text-[10px] text-stone-400 mt-2 italic text-center">Save a backup of your entries and letters.</p>
         </div>
       </div>
     </div>
