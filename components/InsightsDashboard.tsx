@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { CapsuleEntry, WeeklyLetter, UserProfile } from '../types';
 import WeeklyLetterView from './WeeklyLetterView';
+import MoodTrendChart from './MoodTrendChart';
 
 interface InsightsDashboardProps {
     entries: CapsuleEntry[];
@@ -24,6 +25,9 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ entries, letters,
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Mood Trend Chart */}
+            <MoodTrendChart entries={entries} />
+
             {letters.map(letter => <WeeklyLetterView key={letter.id} letter={letter} />)}
 
             {entries.length > 0 && (

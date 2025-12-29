@@ -101,6 +101,71 @@ const App: React.FC = () => {
     }
   }, [profile]);
 
+  // DATA MANAGEMENT Handlers
+  const handleExport = useCallback(() => {
+    const data = {
+      entries,
+      letters: weeklyLetters,
+      profile,
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `capsule_archive_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [entries, weeklyLetters, profile]);
+
+  const handleImport = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+
+        // Basic Validation
+        if (!json.entries || !json.profile) {
+          alert("Invalid archive file.");
+          return;
+        }
+
+        if (confirm("This will merge your archive and OVERWRITE your current profile settings. Continue?")) {
+          // Merge Entries (Avoid Duplicates by ID)
+          setEntries(current => {
+            const currentIds = new Set(current.map(c => c.id));
+            const newEntries = (json.entries as CapsuleEntry[]).filter(e => !currentIds.has(e.id));
+            return [...newEntries, ...current].sort((a, b) => b.timestamp - a.timestamp);
+          });
+
+          // Merge Letters
+          if (json.letters) {
+            setWeeklyLetters(current => {
+              const currentIds = new Set(current.map(l => l.id));
+              const newLetters = (json.letters as WeeklyLetter[]).filter(l => !currentIds.has(l.id));
+              return [...newLetters, ...current].sort((a, b) => b.timestamp - a.timestamp);
+            });
+          }
+
+          // Overwrite Profile
+          setProfile(json.profile);
+
+          alert("Archive successfully restored.");
+        }
+      } catch (err) {
+        console.error("Import failed", err);
+        alert("Failed to read the archive file.");
+      }
+    };
+    reader.readAsText(file);
+  }, []);
+
+
+
   // When changing tabs, clear any active filters
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
@@ -141,7 +206,7 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'insights' && <InsightsDashboard entries={entries} letters={weeklyLetters} profile={profile} />}
-        {activeTab === 'profile' && <ProfileSettings profile={profile} onChange={setProfile} />}
+        {activeTab === 'profile' && <ProfileSettings profile={profile} onChange={setProfile} onExport={handleExport} onImport={handleImport} />}
       </main>
 
       {/* FIXED BOTTOM NAVIGATION FOR MOBILE THUMBS */}

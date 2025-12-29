@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { CapsuleEntry, UserProfile } from '../types';
 import VoiceRecorder from './VoiceRecorder';
+import StreakBadge from './StreakBadge';
 
 interface ChatInterfaceProps {
   entries: CapsuleEntry[];
@@ -29,14 +30,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ entries, profile, onRecor
   return (
     <div className="flex flex-col h-[600px] w-full max-w-2xl mx-auto glass-morphism rounded-3xl border border-stone-200 overflow-hidden shadow-2xl">
       {/* Chat Header */}
-      <div className="bg-stone-800 p-4 flex items-center gap-3 text-white">
-        <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
-          <i className="fas fa-leaf"></i>
+      <div className="bg-stone-800 p-4 flex items-center justify-between text-white">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+            <i className="fas fa-leaf"></i>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm">The Capsule Archivist</h3>
+            <p className="text-[10px] text-emerald-300 uppercase tracking-widest font-bold">Online • Listening</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-bold text-sm">The Capsule Archivist</h3>
-          <p className="text-[10px] text-emerald-300 uppercase tracking-widest font-bold">Online • Listening</p>
-        </div>
+        <StreakBadge entries={entries} />
       </div>
 
       {/* Chat Messages */}

@@ -5,9 +5,11 @@ import { UserProfile } from '../types';
 interface ProfileSettingsProps {
   profile: UserProfile;
   onChange: (profile: UserProfile) => void;
+  onExport: () => void;
+  onImport: (file: File) => void;
 }
 
-const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, onChange }) => {
+const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, onChange, onExport, onImport }) => {
   const archetypes = [
     { id: 'nurturer', name: 'The Nurturer', icon: 'fa-heart', desc: 'Warm, empathetic, and nurturing.' },
     { id: 'stoic', name: 'The Anchor', icon: 'fa-anchor', desc: 'Resilient, grounded, and objective.' },
@@ -129,8 +131,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, onChange }) 
                   key={arch.id}
                   onClick={() => onChange({ ...profile, persona: arch.id })}
                   className={`flex items-start gap-4 p-4 rounded-2xl border transition-all text-left ${profile.persona === arch.id
-                      ? 'bg-stone-800 border-stone-800 text-white shadow-lg scale-[1.02]'
-                      : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300'
+                    ? 'bg-stone-800 border-stone-800 text-white shadow-lg scale-[1.02]'
+                    : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300'
                     }`}
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${profile.persona === arch.id ? 'bg-white/10' : 'bg-stone-50 text-stone-400'}`}>
@@ -153,14 +155,62 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ profile, onChange }) 
                   key={filter}
                   onClick={() => onChange({ ...profile, resonanceFilter: filter })}
                   className={`py-4 px-1 rounded-xl text-[9px] font-bold uppercase tracking-tight transition-all border ${profile.resonanceFilter === filter
-                      ? 'bg-stone-800 text-white border-stone-800 shadow-md'
-                      : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
+                    ? 'bg-stone-800 text-white border-stone-800 shadow-md'
+                    : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
                     }`}
                 >
                   {filter.replace('-', ' ')}
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+      </div>
+
+
+      {/* SECTION: DATA MANAGEMENT */}
+      <div className="glass-morphism p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-stone-200 shadow-sm relative overflow-hidden">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center text-stone-500">
+            <i className="fas fa-database"></i>
+          </div>
+          <div>
+            <h2 className="serif text-xl font-bold text-stone-800">The Vault</h2>
+            <p className="text-stone-500 text-[10px] uppercase tracking-widest font-bold">Backup & Restore</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
+            <h4 className="font-bold text-sm text-stone-800 mb-2">Backup Archive</h4>
+            <p className="text-xs text-stone-500 mb-4 leading-relaxed">Save a copy of your journal, letters, and settings to this device.</p>
+            <button
+              onClick={onExport}
+              className="w-full py-3 bg-stone-800 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-900 transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-download"></i> Download
+            </button>
+          </div>
+
+          <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100">
+            <h4 className="font-bold text-sm text-stone-800 mb-2">Restore Archive</h4>
+            <p className="text-xs text-stone-500 mb-4 leading-relaxed">Restore your data from a backup file. Existing data will be merged.</p>
+            <label className="w-full py-3 bg-white border border-stone-200 text-stone-800 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-50 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+              <i className="fas fa-upload"></i> Restore
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    onImport(e.target.files[0]);
+                    // Reset value so same file can be selected again if needed
+                    e.target.value = '';
+                  }
+                }}
+              />
+            </label>
           </div>
         </div>
       </div>
