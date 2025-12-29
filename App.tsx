@@ -12,7 +12,6 @@ const App: React.FC = () => {
   const [entries, setEntries] = useState<CapsuleEntry[]>([]);
   const [filteredEntries, setFilteredEntries] = useState<CapsuleEntry[] | null>(null);
   const [weeklyLetters, setWeeklyLetters] = useState<WeeklyLetter[]>([]);
-  const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const [profile, setProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('capsule_profile');
     if (saved) {
@@ -175,13 +174,6 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen pb-32 pt-8 max-w-4xl mx-auto px-4 sm:px-6 transition-colors duration-1000 overflow-x-hidden`}>
       <header className="mb-10 flex flex-col items-center text-center relative px-2">
-        <button
-          onClick={() => setIsPrivacyMode(!isPrivacyMode)}
-          className={`absolute top-0 right-0 p-3 rounded-full transition-all ${isPrivacyMode ? 'bg-stone-800 text-white' : 'text-stone-400 hover:text-stone-800'}`}
-          title="Toggle Privacy Shield"
-        >
-          <i className={`fas ${isPrivacyMode ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-        </button>
         <div className={`w-14 h-14 aura-bg-accent rounded-2xl flex items-center justify-center mb-4 shadow-lg rotate-3 hover:rotate-0 transition-all cursor-pointer`}>
           <i className="fas fa-leaf text-white text-2xl"></i>
         </div>
