@@ -7,8 +7,8 @@ import { CapsuleEntry, CapsuleAnalysis, WeeklyLetter, UserProfile } from "../typ
 const generateContentViaProxy = async (model: string, contents: any, config?: any) => {
   // LOCAL DEVELOPMENT: Use direct SDK to avoid Vercel function dependency
   if (import.meta.env.DEV) {
-    const apiKey = import.meta.env.VITE_API_KEY;
-    if (!apiKey) throw new Error("Missing VITE_API_KEY for local development");
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) throw new Error("Missing GEMINI_API_KEY for local development");
 
     const ai = new GoogleGenAI({ apiKey });
     return await ai.models.generateContent({
