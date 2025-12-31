@@ -6,7 +6,9 @@ import ArchiveSearch from './components/ArchiveSearch';
 import ProfileSettings from './components/ProfileSettings';
 import ChatInterface from './components/ChatInterface';
 import InsightsDashboard from '@/components/InsightsDashboard';
+import LockScreen from './components/LockScreen';
 import { analyzeVoiceNote, analyzeTextLog, generateWeeklyLetter, generateSoulCard } from './services/geminiService';
+import { encryptData, decryptData } from './services/cryptoService';
 
 const App: React.FC = () => {
   const [entries, setEntries] = useState<CapsuleEntry[]>([]);
@@ -41,19 +43,81 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'archive' | 'insights' | 'profile'>('chat');
 
+  // Lock Screen State (Always start locked to allow setup or verify)
+  const [isLocked, setIsLocked] = useState(true);
+
   useEffect(() => {
     document.body.className = `aura-${profile.aura}`;
   }, [profile.aura]);
 
-  useEffect(() => {
-    const savedEntries = localStorage.getItem('capsule_entries');
-    if (savedEntries) try { setEntries(JSON.parse(savedEntries)); } catch (e) { }
-    const savedLetters = localStorage.getItem('capsule_letters');
-    if (savedLetters) try { setWeeklyLetters(JSON.parse(savedLetters)); } catch (e) { }
+  // Unlock Handler - Decrypts data using PIN
+  const handleUnlock = useCallback(async (pin: string) => {
+    try {
+      // 1. Verify PIN (in real app, compare hash)
+      // For now, simple check against stored plain/hashed pin
+      const storedPin = localStorage.getItem('capsule_pin');
+      if (storedPin && storedPin !== pin) {
+        return false;
+      }
+
+      // 2. Decrypt Data
+      const savedEntries = localStorage.getItem('capsule_entries');
+      if (savedEntries) {
+        try {
+          // Attempt decrypt
+          const decrypted = await decryptData(savedEntries, pin);
+          if (decrypted) {
+            setEntries(decrypted);
+          } else {
+            // Fallback for legacy unencrypted data (migration path)
+            try {
+              setEntries(JSON.parse(savedEntries));
+            } catch (e) { }
+          }
+        } catch (e) {
+          // Fallback for legacy
+          try { setEntries(JSON.parse(savedEntries)); } catch (e) { }
+        }
+      }
+
+      const savedLetters = localStorage.getItem('capsule_letters');
+      if (savedLetters) {
+        try {
+          const decrypted = await decryptData(savedLetters, pin);
+          if (decrypted) setWeeklyLetters(decrypted);
+          else try { setWeeklyLetters(JSON.parse(savedLetters)); } catch (e) { }
+        } catch (e) { try { setWeeklyLetters(JSON.parse(savedLetters)); } catch (e) { } }
+      }
+
+      setIsLocked(false);
+      return true;
+    } catch (e) {
+      console.error("Unlock failed", e);
+      return false;
+    }
   }, []);
 
-  useEffect(() => { localStorage.setItem('capsule_entries', JSON.stringify(entries)); }, [entries]);
-  useEffect(() => { localStorage.setItem('capsule_letters', JSON.stringify(weeklyLetters)); }, [weeklyLetters]);
+  // Encrypt & Save Effect
+  useEffect(() => {
+    // Only save if unlocked and we have a PIN to encrypt with
+    const pin = localStorage.getItem('capsule_pin');
+    if (!isLocked && pin) {
+      encryptData(entries, pin).then(enc => localStorage.setItem('capsule_entries', enc));
+    } else if (!pin) {
+      // No PIN setup yet, save plain
+      localStorage.setItem('capsule_entries', JSON.stringify(entries));
+    }
+  }, [entries, isLocked]);
+
+  useEffect(() => {
+    const pin = localStorage.getItem('capsule_pin');
+    if (!isLocked && pin) {
+      encryptData(weeklyLetters, pin).then(enc => localStorage.setItem('capsule_letters', enc));
+    } else if (!pin) {
+      localStorage.setItem('capsule_letters', JSON.stringify(weeklyLetters));
+    }
+  }, [weeklyLetters, isLocked]);
+
   useEffect(() => { localStorage.setItem('capsule_profile', JSON.stringify(profile)); }, [profile]);
 
   const handleRecordingComplete = useCallback(async (blob: Blob, base64: string, imageBase64?: string) => {
@@ -173,6 +237,18 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen pb-32 pt-8 max-w-4xl mx-auto px-4 sm:px-6 transition-colors duration-1000 overflow-x-hidden`}>
+      {isLocked && (
+        <LockScreen
+          onUnlock={async (pin) => {
+            const success = await handleUnlock(pin);
+            // LockScreen component handles error display via internal state if we don't call setLocked(false)
+            // But we need a way to tell it failed.
+            // For simplicity in this iteration:
+            if (!success) alert("Incorrect PIN or Data Unreadable");
+          }}
+        />
+      )}
+
       <header className="mb-10 flex flex-col items-center text-center relative px-2">
         <div className={`w-14 h-14 aura-bg-accent rounded-2xl flex items-center justify-center mb-4 shadow-lg rotate-3 hover:rotate-0 transition-all cursor-pointer`}>
           <i className="fas fa-leaf text-white text-2xl"></i>

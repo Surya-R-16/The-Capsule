@@ -1,17 +1,33 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { CapsuleEntry, CapsuleAnalysis, WeeklyLetter, UserProfile } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to call the serverless proxy
+const generateContentViaProxy = async (model: string, contents: any, config?: any) => {
+  const response = await fetch('/api/gemini-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, contents, config })
+  });
+
+  if (!response.ok) {
+    const errorDetails = await response.text();
+    throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorDetails}`);
+  }
+
+  return await response.json();
+};
 
 const getSystemInstruction = (profile: UserProfile) => {
-  const personas = {
+  const personas: Record<string, string> = {
     empathetic: "a deeply warm, empathetic, and nurturing archivist who focuses on feelings and validation.",
     stoic: "a calm, objective, and grounding archivist who focuses on logic, resilience, and growth.",
     poetic: "a lyrical, philosophical, and dreamy archivist who finds beauty and metaphor in the mundane."
   };
 
-  return `You are 'The Capsule,' ${personas[profile.persona]}. 
+  const personaDesc = personas[profile.persona] || personas['nurturer'] || "a warm and nurturing archivist.";
+
+  return `You are 'The Capsule,' ${personaDesc}. 
 Your user is ${profile.name}. Their current life focus is: "${profile.northStar}".
 When processing a voice recording:
 1. Transcribe it accurately.
@@ -38,19 +54,23 @@ const ANALYSIS_SCHEMA = {
 
 export const generateSoulCard = async (prompt: string): Promise<string | undefined> => {
   try {
-    const response = await ai.models.generateContent({
-      model: 'imagen-3.0-generate-001',
-      contents: {
+    const result = await generateContentViaProxy(
+      'imagen-3.0-generate-001',
+      {
         parts: [{ text: `A beautiful, minimalist, abstract digital art piece: ${prompt}. Artistic, soft colors, high quality.` }]
       },
-      config: {
+      {
         imageConfig: { aspectRatio: "1:1" }
       }
-    });
+    );
 
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
+    // Response structure from proxy might match standard API response structure
+    // We expect candidates[0].content.parts
+    if (result.candidates?.[0]?.content?.parts) {
+      for (const part of result.candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
       }
     }
   } catch (error) {
@@ -63,22 +83,23 @@ export const analyzeVoiceNote = async (base64Audio: string, mimeType: string, pr
   const model = "models/gemini-flash-latest";
 
   try {
-    const response = await ai.models.generateContent({
+    const parts: any[] = [{ inlineData: { data: base64Audio, mimeType } }];
+    if (imageBase64) {
+      parts.push({ inlineData: { data: imageBase64, mimeType: "image/jpeg" } });
+    }
+    parts.push({ text: "Analyze this memory for my archive." });
+
+    const result = await generateContentViaProxy(
       model,
-      contents: {
-        parts: [
-          { inlineData: { data: base64Audio, mimeType } },
-          { text: "Analyze this memory for my archive." }
-        ]
-      },
-      config: {
+      { parts },
+      {
         systemInstruction: getSystemInstruction(profile),
         responseMimeType: "application/json",
         responseSchema: ANALYSIS_SCHEMA
       }
-    });
+    );
 
-    return JSON.parse(response.text || "{}") as CapsuleAnalysis;
+    return JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "{}") as CapsuleAnalysis;
   } catch (error) {
     console.error("Error analyzing voice note:", error);
     throw error;
@@ -89,21 +110,19 @@ export const analyzeTextLog = async (text: string, profile: UserProfile): Promis
   const model = "models/gemini-flash-latest";
 
   try {
-    const response = await ai.models.generateContent({
+    const result = await generateContentViaProxy(
       model,
-      contents: {
-        parts: [
-          { text: `Analyze this text memory for my archive: "${text}"` }
-        ]
+      {
+        parts: [{ text: `Analyze this text memory for my archive: "${text}"` }]
       },
-      config: {
+      {
         systemInstruction: getSystemInstruction(profile),
         responseMimeType: "application/json",
         responseSchema: ANALYSIS_SCHEMA
       }
-    });
+    );
 
-    return JSON.parse(response.text || "{}") as CapsuleAnalysis;
+    return JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "{}") as CapsuleAnalysis;
   } catch (error) {
     console.error("Error analyzing text log:", error);
     throw error;
@@ -126,10 +145,10 @@ export const generateWeeklyLetter = async (entries: CapsuleEntry[], weekLabel: s
   Return JSON with 'content' and 'themes'.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const result = await generateContentViaProxy(
       model,
-      contents: prompt,
-      config: {
+      { parts: [{ text: prompt }] },
+      {
         systemInstruction: getSystemInstruction(profile),
         responseMimeType: "application/json",
         responseSchema: {
@@ -141,9 +160,9 @@ export const generateWeeklyLetter = async (entries: CapsuleEntry[], weekLabel: s
           required: ["content", "themes"]
         }
       }
-    });
+    );
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
     return {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -162,15 +181,17 @@ export const askTheArchive = async (query: string, history: string, profile: Use
   const prompt = `User ${profile.name} (Focus: ${profile.northStar}) asks: "${query}"\n\nArchive:\n${history}`;
 
   try {
-    const response = await ai.models.generateContent({
+    const result = await generateContentViaProxy(
       model,
-      contents: prompt,
-      config: {
+      { parts: [{ text: prompt }] },
+      {
         systemInstruction: `You are The Capsule (${profile.persona} persona). Help the user find insights in their archive.`
       }
-    });
-    return response.text || "";
+    );
+    return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
   } catch (error) {
     return "I'm having trouble searching right now.";
   }
 };
+
+
