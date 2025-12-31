@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.VITE_API_KEY || process.env.API_KEY }); // Vercel uses process.env
 
 export const config = {
-    runtime: 'edge', // Use Edge runtime for faster cold starts if compatible, or default
+    // runtime: 'edge', // Edge can be tricky with some SDKs. Switching to Node for stability.
 };
 
 // Vercel Serverless Function

@@ -135,8 +135,8 @@ const App: React.FC = () => {
         type: 'voice'
       };
       setEntries(prev => [newEntry, ...prev]);
-    } catch (err) {
-      alert("The archive encountered an error. Please try again.");
+    } catch (err: any) {
+      alert(`Error: ${err.message || "Unknown error"}`);
     } finally {
       setIsProcessing(false);
     }
@@ -156,9 +156,9 @@ const App: React.FC = () => {
         type: 'text'
       };
       setEntries(prev => [newEntry, ...prev]);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("The archive encountered an error. Please try again.");
+      alert(`Error: ${err.message || "Unknown error"}`);
     } finally {
       setIsProcessing(false);
     }
