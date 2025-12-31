@@ -1,9 +1,24 @@
 
-import { Type } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { CapsuleEntry, CapsuleAnalysis, WeeklyLetter, UserProfile } from "../types";
 
 // Helper to call the serverless proxy
+// Helper to call the serverless proxy OR direct SDK in dev
 const generateContentViaProxy = async (model: string, contents: any, config?: any) => {
+  // LOCAL DEVELOPMENT: Use direct SDK to avoid Vercel function dependency
+  if (import.meta.env.DEV) {
+    const apiKey = import.meta.env.VITE_API_KEY;
+    if (!apiKey) throw new Error("Missing VITE_API_KEY for local development");
+
+    const ai = new GoogleGenAI({ apiKey });
+    return await ai.models.generateContent({
+      model,
+      contents,
+      config
+    });
+  }
+
+  // PRODUCTION: Use Serverless Proxy
   const response = await fetch('/api/gemini-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
