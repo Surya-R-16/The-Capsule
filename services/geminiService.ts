@@ -2,36 +2,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { CapsuleEntry, CapsuleAnalysis, WeeklyLetter, UserProfile } from "../types";
 
-// Helper to call the serverless proxy
-// Helper to call the serverless proxy OR direct SDK in dev
-const generateContentViaProxy = async (model: string, contents: any, config?: any) => {
-  // LOCAL DEVELOPMENT: Use direct SDK to avoid Vercel function dependency
-  if (import.meta.env.DEV) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey) throw new Error("Missing GEMINI_API_KEY for local development");
-
-    const ai = new GoogleGenAI({ apiKey });
-    return await ai.models.generateContent({
-      model,
-      contents,
-      config
-    });
-  }
-
-  // PRODUCTION: Use Serverless Proxy
-  const response = await fetch('/api/gemini-proxy', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, contents, config })
-  });
-
-  if (!response.ok) {
-    const errorDetails = await response.text();
-    throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorDetails}`);
-  }
-
-  return await response.json();
-};
+// Initialize AI Client directly
+const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_API_KEY || process.env.API_KEY;
+if (!apiKey) console.warn("Missing API Key");
+const ai = new GoogleGenAI({ apiKey: apiKey || "" });
 
 const getSystemInstruction = (profile: UserProfile) => {
   const personas: Record<string, string> = {
@@ -69,23 +43,19 @@ const ANALYSIS_SCHEMA = {
 
 export const generateSoulCard = async (prompt: string): Promise<string | undefined> => {
   try {
-    const result = await generateContentViaProxy(
-      'imagen-3.0-generate-001',
-      {
+    const response = await ai.models.generateContent({
+      model: 'imagen-3.0-generate-001',
+      contents: {
         parts: [{ text: `A beautiful, minimalist, abstract digital art piece: ${prompt}. Artistic, soft colors, high quality.` }]
       },
-      {
+      config: {
         imageConfig: { aspectRatio: "1:1" }
       }
-    );
+    });
 
-    // Response structure from proxy might match standard API response structure
-    // We expect candidates[0].content.parts
-    if (result.candidates?.[0]?.content?.parts) {
-      for (const part of result.candidates[0].content.parts) {
-        if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
-        }
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
   } catch (error) {
@@ -104,17 +74,17 @@ export const analyzeVoiceNote = async (base64Audio: string, mimeType: string, pr
     }
     parts.push({ text: "Analyze this memory for my archive." });
 
-    const result = await generateContentViaProxy(
+    const response = await ai.models.generateContent({
       model,
-      { parts },
-      {
+      contents: { parts },
+      config: {
         systemInstruction: getSystemInstruction(profile),
         responseMimeType: "application/json",
         responseSchema: ANALYSIS_SCHEMA
       }
-    );
+    });
 
-    return JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "{}") as CapsuleAnalysis;
+    return JSON.parse(response.text || "{}") as CapsuleAnalysis;
   } catch (error) {
     console.error("Error analyzing voice note:", error);
     throw error;
@@ -125,19 +95,19 @@ export const analyzeTextLog = async (text: string, profile: UserProfile): Promis
   const model = "models/gemini-flash-latest";
 
   try {
-    const result = await generateContentViaProxy(
+    const response = await ai.models.generateContent({
       model,
-      {
+      contents: {
         parts: [{ text: `Analyze this text memory for my archive: "${text}"` }]
       },
-      {
+      config: {
         systemInstruction: getSystemInstruction(profile),
         responseMimeType: "application/json",
         responseSchema: ANALYSIS_SCHEMA
       }
-    );
+    });
 
-    return JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "{}") as CapsuleAnalysis;
+    return JSON.parse(response.text || "{}") as CapsuleAnalysis;
   } catch (error) {
     console.error("Error analyzing text log:", error);
     throw error;
@@ -160,10 +130,10 @@ export const generateWeeklyLetter = async (entries: CapsuleEntry[], weekLabel: s
   Return JSON with 'content' and 'themes'.`;
 
   try {
-    const result = await generateContentViaProxy(
+    const response = await ai.models.generateContent({
       model,
-      { parts: [{ text: prompt }] },
-      {
+      contents: { parts: [{ text: prompt }] },
+      config: {
         systemInstruction: getSystemInstruction(profile),
         responseMimeType: "application/json",
         responseSchema: {
@@ -175,9 +145,9 @@ export const generateWeeklyLetter = async (entries: CapsuleEntry[], weekLabel: s
           required: ["content", "themes"]
         }
       }
-    );
+    });
 
-    const parsed = JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+    const parsed = JSON.parse(response.text || "{}");
     return {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -196,14 +166,14 @@ export const askTheArchive = async (query: string, history: string, profile: Use
   const prompt = `User ${profile.name} (Focus: ${profile.northStar}) asks: "${query}"\n\nArchive:\n${history}`;
 
   try {
-    const result = await generateContentViaProxy(
+    const response = await ai.models.generateContent({
       model,
-      { parts: [{ text: prompt }] },
-      {
+      contents: { parts: [{ text: prompt }] },
+      config: {
         systemInstruction: `You are The Capsule (${profile.persona} persona). Help the user find insights in their archive.`
       }
-    );
-    return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    });
+    return response.text || "";
   } catch (error) {
     return "I'm having trouble searching right now.";
   }
