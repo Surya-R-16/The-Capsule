@@ -23,7 +23,8 @@ When processing a voice recording:
 2. Analyze the mood and key events.
 3. Provide a response (1-2 sentences) tailored to their name and life focus.
 4. Extract tags and a summary.
-5. Create an 'imagePrompt': a detailed description for an abstract visual metaphor representing the mood and theme of this entry (e.g., 'A solitary lighthouse in a sea of violet mist' for a lonely but hopeful entry).
+5. Create an 'imagePrompt': a detailed description for an abstract visual metaphor representing the mood and theme of this entry.
+6. assign a 'moodCategory' from this exact list: [Radiance, Serenity, Wonder, Introspection, Nostalgia, Melancholy, Storm]. Choose the one that best fits the emotional undercurrent.
 
 You must return a valid JSON object.`;
 };
@@ -36,9 +37,10 @@ const ANALYSIS_SCHEMA = {
     mood: { type: Type.STRING },
     tags: { type: Type.ARRAY, items: { type: Type.STRING } },
     response: { type: Type.STRING },
-    imagePrompt: { type: Type.STRING, description: "Prompt for an abstract visual metaphor." }
+    imagePrompt: { type: Type.STRING, description: "Prompt for an abstract visual metaphor." },
+    moodCategory: { type: Type.STRING, enum: ["Radiance", "Serenity", "Wonder", "Introspection", "Nostalgia", "Melancholy", "Storm"] },
   },
-  required: ["transcript", "summary", "mood", "tags", "response", "imagePrompt"]
+  required: ["transcript", "summary", "mood", "tags", "response", "imagePrompt", "moodCategory"]
 };
 
 export const generateSoulCard = async (prompt: string): Promise<string | undefined> => {

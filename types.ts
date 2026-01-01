@@ -22,6 +22,7 @@ export interface CapsuleEntry {
   imagePrompt?: string;
   isBotResponse?: boolean; // New: to distinguish chat bubbles
   type?: 'voice' | 'text';
+  moodCategory?: 'Radiance' | 'Serenity' | 'Wonder' | 'Introspection' | 'Nostalgia' | 'Melancholy' | 'Storm' | 'Unknown';
 }
 
 export interface CapsuleAnalysis {
@@ -31,6 +32,7 @@ export interface CapsuleAnalysis {
   transcript: string;
   response: string;
   imagePrompt: string;
+  moodCategory?: 'Radiance' | 'Serenity' | 'Wonder' | 'Introspection' | 'Nostalgia' | 'Melancholy' | 'Storm' | 'Unknown';
 }
 
 export interface WeeklyLetter {

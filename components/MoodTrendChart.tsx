@@ -5,20 +5,33 @@ interface MoodTrendChartProps {
     entries: CapsuleEntry[];
 }
 
-// Mood color mapping
+// Mood color mapping - The Capsule Palette
 const moodColors: Record<string, string> = {
-    'Stressed': '#ef4444',
-    'Anxious': '#f97316',
-    'Neutral': '#a8a29e',
-    'Calm': '#22c55e',
-    'Peaceful': '#10b981',
-    'Reflective': '#6366f1',
-    'Hopeful': '#eab308',
-    'Grateful': '#14b8a6',
-    'Joyful': '#f59e0b',
-    'Excited': '#ec4899',
-    'Melancholic': '#8b5cf6',
-    'Contemplative': '#3b82f6',
+    'Radiance': '#fbbf24',      // Amber-400 (Joy, Confidence)
+    'Serenity': '#2dd4bf',      // Teal-400 (Peace, Calm)
+    'Wonder': '#e879f9',        // Fuchsia-400 (Awe, Curiosity)
+    'Introspection': '#818cf8', // Indigo-400 (Focus, Neutral)
+    'Nostalgia': '#d6d3d1',     // Stone-300 (Bittersweet, Old memories) -> actually Warm Sepia/Bronze might be better #a8a29e? Let's go with a warm grey
+    'Melancholy': '#6366f1',    // Indigo-500 (Sadness)
+    'Storm': '#f87171',         // Red-400 (Anger, Anxiety)
+    'Unknown': '#57534e'        // Stone-600
+};
+
+// Legacy fallback map
+const legacyMoodMap: Record<string, string> = {
+    'Joyful': 'Radiance', 'Happy': 'Radiance', 'Excited': 'Radiance', 'Confident': 'Radiance',
+    'Calm': 'Serenity', 'Peaceful': 'Serenity', 'Relaxed': 'Serenity',
+    'Reflective': 'Introspection', 'Neutral': 'Introspection', 'Focus': 'Introspection',
+    'Sad': 'Melancholy', 'Melancholic': 'Melancholy', 'Lonely': 'Melancholy',
+    'Anxious': 'Storm', 'Stressed': 'Storm', 'Angry': 'Storm',
+    'Grateful': 'Wonder', 'Inspired': 'Wonder', 'Hopeful': 'Wonder'
+};
+
+const getCategory = (entry: CapsuleEntry): string => {
+    if (entry.moodCategory && moodColors[entry.moodCategory]) return entry.moodCategory;
+    // Attempt legacy mapping
+    const mapped = legacyMoodMap[entry.mood] || legacyMoodMap[Object.keys(legacyMoodMap).find(k => entry.mood.includes(k)) || ''] || 'Unknown';
+    return mapped;
 };
 
 const MoodTrendChart: React.FC<MoodTrendChartProps> = ({ entries }) => {
@@ -26,7 +39,7 @@ const MoodTrendChart: React.FC<MoodTrendChartProps> = ({ entries }) => {
         if (entries.length === 0) return [];
 
         // Get last 14 days
-        const days: { date: string; label: string; moods: string[] }[] = [];
+        const days: { date: string; label: string; moods: { category: string, mood: string }[] }[] = [];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -43,7 +56,10 @@ const MoodTrendChart: React.FC<MoodTrendChartProps> = ({ entries }) => {
             const dateStr = new Date(entry.timestamp).toISOString().split('T')[0];
             const day = days.find(d => d.date === dateStr);
             if (day) {
-                day.moods.push(entry.mood);
+                day.moods.push({
+                    category: getCategory(entry),
+                    mood: entry.mood
+                });
             }
         });
 
@@ -77,15 +93,15 @@ const MoodTrendChart: React.FC<MoodTrendChartProps> = ({ entries }) => {
                             style={{
                                 height: day.moods.length > 0 ? `${(day.moods.length / maxMoods) * barMaxHeight}px` : '4px',
                                 backgroundColor: day.moods.length > 0
-                                    ? (moodColors[day.moods[day.moods.length - 1]] || '#a8a29e')
-                                    : '#e5e5e5',
+                                    ? (moodColors[day.moods[day.moods.length - 1].category] || '#57534e')
+                                    : '#292524', // stone-800 for empty
                                 minHeight: '4px'
                             }}
                         >
                             {/* Tooltip */}
                             {day.moods.length > 0 && (
                                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-stone-800 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                    {day.moods.join(', ')}
+                                    {day.moods.map(m => m.mood).join(', ')}
                                 </div>
                             )}
                         </div>

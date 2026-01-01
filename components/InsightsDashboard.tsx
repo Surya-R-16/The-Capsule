@@ -12,14 +12,19 @@ interface InsightsDashboardProps {
 const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ entries, letters, profile }) => {
     const stats = useMemo(() => {
         const moods = entries.reduce((acc, curr) => {
-            acc[curr.mood] = (acc[curr.mood] || 0) + 1;
+            const category = curr.moodCategory || 'Unknown'; // Or use helper if available, but simple check fits standard new data
+            acc[category] = (acc[category] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
+
         const sorted = Object.entries(moods).sort((a, b) => (b[1] as number) - (a[1] as number));
+        // Fallback for primary mood text (use most frequent category or actual mood if no category)
+        const primaryCategory = sorted.length > 0 ? sorted[0][0] : 'Peaceful';
+
         return {
             total: entries.length,
             sortedMoods: sorted as [string, number][],
-            primaryMood: sorted.length > 0 ? sorted[0][0] : 'Peaceful'
+            primaryMood: primaryCategory
         };
     }, [entries]);
 
@@ -35,7 +40,7 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ entries, letters,
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
                     <h3 className="serif text-2xl sm:text-3xl mb-6 font-medium tracking-wide">Patterns of {profile.name}</h3>
                     <p className="text-stone-300 leading-loose italic text-lg sm:text-xl font-light">
-                        "You've recorded {entries.length} moments of your journey. Your {stats.primaryMood.toLowerCase()} reflections suggest you're staying true to your focus."
+                        "You've recorded {entries.length} moments of your journey. Your tendency towards <span className="text-white font-normal">{stats.primaryMood}</span> suggests you're staying true to your focus."
                     </p>
                 </div>
             )}
