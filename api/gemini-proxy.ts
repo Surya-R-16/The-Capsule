@@ -1,7 +1,13 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.VITE_API_KEY || process.env.API_KEY }); // Vercel uses process.env
+const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_API_KEY || process.env.API_KEY;
+
+if (!apiKey) {
+    console.error("DEBUG: API Key is missing. Available env vars:", Object.keys(process.env).filter(k => k.includes('API') || k.includes('KEY')));
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey || "dummy_key_to_prevent_init_crash" }); // Prevent crash on init, fail on call instead if missing
 
 export const config = {
     // runtime: 'edge', // Edge can be tricky with some SDKs. Switching to Node for stability.
@@ -30,8 +36,17 @@ export default async function handler(request: Request) {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('API Error:', error);
-        return new Response(JSON.stringify({ error: 'Internal Server Error', details: error }), { status: 500 });
+
+        // Return helpful debug info to client
+        if (error.message?.includes('API Key')) {
+            return new Response(JSON.stringify({
+                error: 'Configuration Error: API Key is missing on the server.',
+                details: 'Please add GEMINI_API_KEY to Vercel Environment Variables.'
+            }), { status: 500 });
+        }
+
+        return new Response(JSON.stringify({ error: 'Internal Server Error', details: error.message || error }), { status: 500 });
     }
 }
